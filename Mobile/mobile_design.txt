@@ -1,0 +1,114 @@
+
+AIoT Fresh Monitor Mobile App: Master Design Specification
+_This document serves as the authoritative blueprint for the mobile app, merging visual style and functional requirements. Last Updated: 2025-12-12._
+
+---
+
+1. Visual Style & Theme
+This section defines the high-fidelity "Professional Navy & Gold" theme.
+
+Typography
+- Font Family: 'Inter', sans-serif (Clean, modern, legible).
+- Weights: 400 (Regular), 600 (Semi-Bold), 700 (Bold).
+
+Color Palette
+- Primary Action/Highlight: Golden Yellow (`#FFC107`) - Used for active tab icons, key data values, and interactive highlights.
+- Primary Brand: Deep Navy (`#00334E`) - Used for user chat bubbles, light mode headers, and light mode active states.
+- Dark Mode Backgrounds:
+  - App Background: Deep Charcoal (`#141b1f`)
+  - Card Background: Dark Slate (`#1e282e`)
+  - Text: Off-white (`#E0E0E0`)
+- Light Mode Backgrounds:
+  - App Background: Pale Gray (`#F5F7FA`)
+  - Card Background: Pure White (`#FFFFFF`)
+  - Text: Dark Slate (`#263238`)
+- Status Indicators:
+  - Success/Online: Forest Green (`#2E7D32`)
+  - Critical/Alert: Crimson Red (`#C62828`)
+  - Warning: Orange (`#EF6C00`)
+
+Global UI Elements
+- Corner Radius: 12px for internal cards and buttons.
+- Shadows: Soft, diffused shadows to create depth.
+- Transitions: Smooth transitions (0.3s) for background colors when switching themes.
+
+---
+
+2. Navigation Structure
+The app will use a conditional navigation flow based on authentication status.
+
+Initial View: Login Screen
+- The app opens to a dedicated Login Screen.
+- This screen is separate from the main app interface.
+- It will feature input fields for email/password and a login button, styled with the app's theme.
+
+Main App View: Bottom Tab Navigator
+- After a successful login, the user is directed to the main app interface, which is controlled by a bottom navigation bar.
+- The bar's background matches the card background color of the active theme.
+- It contains three tabs:
+  1. Home (Icon: House)
+  2. AI Assist (Icon: Robot Face)
+  3. Settings (Icon: Gear)
+- The active tab icon and label are highlighted in Gold (Dark Mode) or Navy (Light Mode).
+
+---
+
+3. Screen Specifications
+
+A. Login Screen
+- Objective: Securely authenticate the user via Firebase Authentication.
+- Layout: Centered form with app logo, two input fields (email, password), a "Login" button, and a secondary button/link for "Register".
+
+B. Home Screen (Dashboard)
+- Objective: Provide an at-a-glance summary of all monitored containers.
+- Header: App Title "AIoT Fresh Monitor" (Bold) on the left; a cloud icon on the right indicating Firebase connection status.
+- Content: A vertically scrollable list of Container Cards.
+- Container Card Functional Design:
+  - Header: Container ID (e.g., "container-001") on the left; Status Badge (e.g., Green Dot + "Online") on the right.
+  - Content: Displays `selected_food_type` (e.g., "Cargo: Bananas").
+  - Health Meter: A prominent visual gauge or progress bar that displays a calculated "health score". This score is derived in the client by comparing real-time telemetry against the container's `warn` and `critical` thresholds.
+  - Key Telemetry: A row with icons showing the most critical real-time metrics (e.g., 🌡️ 12.5°C, 💧 90%).
+  - Alerts Banner (Conditional): If active alerts exist, a colored banner (Red for critical, Orange for warn) appears at the bottom with a summary (e.g., "1 CRITICAL ALERT").
+  - Offline State: If a device is offline, the card's opacity is reduced to 80%.
+
+C. Device Detail Screen
+- Objective: Show in-depth historical and real-time data for a single container.
+- Header: Back arrow on the left; Container ID in the center.
+- Layout: A scrollable view containing the following card-based sections:
+  1. Status Summary Card: Displays Food Type, Connection Status, and Last Seen timestamp.
+  2. Live Telemetry Grid: A 2x2 grid showing Temperature, Humidity, MQ4 Gas Level, and GPS data. Values are contextually colored based on their status (e.g., a temperature in a "critical" state will be colored red).
+  3. GPS Location Card: An embedded map view (`react-native-maps`) showing a pin at the container's last known location.
+  4. Historical Data Charts: Horizontally scrolling line charts for temperature and humidity over time. The charts will feature horizontal lines indicating `warn` and `critical` thresholds for easy visual reference.
+  5. Recent Alerts List: A chronological list of the latest alerts, each with a colored status dot, a message, and a timestamp.
+
+D. AI Assist Screen
+- Objective: Provide an interface for Gemini-powered analytics and support.
+- Header: Title "AI Assistant" with a Sparkle icon.
+- Layout:
+  - Chat History: A scrollable view of the conversation. AI responses are left-aligned; user messages are right-aligned in Deep Navy bubbles.
+  - Prompt Chips: A horizontal, scrollable list of buttons above the input bar for one-tap actions, including:
+    - "Get Overall System Summary"
+    - "Download 7-Day Report" (for a specific container if contextually selected)
+  - Input Area: A text field with rounded corners for free-form questions and a "Send" button.
+
+E. Settings Screen
+- Objective: Allow the user to configure app settings and log out.
+- Header: Title "Settings" with a Gear icon.
+- Layout: A list divided into sections.
+  - Section 1: Appearance: Contains a toggle switch to instantly change between Light and Dark modes.
+  - Section 2: Notifications: Contains a toggle switch to enable or disable push notifications for alerts.
+  - Section 3: Account: Contains a "Logout" button that signs the user out and returns them to the Login Screen.
+
+---
+
+4. Data Flow & Backend Integration
+- Authentication: The app uses the Firebase Authentication client SDK. Firestore rules will be configured to only allow reads from authenticated users.
+- Real-time Data: The app uses `onSnapshot` listeners to get real-time updates from Firestore for the container list, telemetry, and alerts.
+- AI Backend: All AI-related features (Q&A, summaries, reports) are powered by a Firebase Cloud Function. The mobile app makes secure HTTPS calls to this function. The function handles data fetching from Firestore, prompt engineering, and calls to the Gemini API.
+- Health Meter Logic: The health score is calculated on the client-side within the React Native app. The logic fetches the latest telemetry and the corresponding thresholds to produce a percentage score.
+- Push Notifications: The app will register for Firebase Cloud Messaging (FCM). The Raspberry Pi backend will be responsible for triggering messages to specific device tokens when critical alerts are generated.
+
+---
+
+NOTE on Implementation Flexibility: This document serves as a comprehensive blueprint. However, visual details are subject to change during implementation based on practical considerations. For simplicity and to manage complexity, some features may be deferred and implemented at a later stage.
+

@@ -1,0 +1,85 @@
+Firebase Learning & Command Reference
+
+This document summarizes the key Firebase concepts and commands learned during the AIoT Fresh Monitor project.
+
+---
+
+1. Firebase Project Setup & Keys
+
+- Client-side vs. Server-side Keys: We learned there's a difference between keys for a server (like the `serviceAccount.json` for the Pi) and keys for a client app (like our mobile app).
+- Finding Client Keys: For a mobile/web app, you need a specific set of keys from a registered "Web App" inside your Firebase project.
+- Location: Firebase Console -> Project Settings (⚙️ icon) -> Your apps -> Select Web App (`</>`).
+- Keys Needed: `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId`.
+
+---
+
+2. Firestore Database: Our Cloud Database
+
+- What it is: A flexible NoSQL database where data is stored in "documents" (similar to JSON files), which are organized into "collections".
+- Our Structure: We used a `containers` collection. Each container is a document. Inside each document, we created sub-collections for `telemetry` and `alerts`. This is a common and scalable pattern.
+- Real-time Listening: Our mobile app uses the `onSnapshot()` function from the Firebase SDK. This function "listens" for any changes in a collection or document and automatically receives updates, which is how our dashboard stays live without needing to be manually refreshed.
+
+---
+
+3. Firestore Security Rules: Protecting Our Data
+
+- Purpose: These are server-side rules that protect your database. They are the "source of truth" for who can read, write, or delete data.
+- "Missing or insufficient permissions" Error: We learned that this error almost always means your security rules are blocking the requested action.
+- Publishing Rules: Rules written in a local `firestore.rules` file do nothing until they are copied into the Firebase console and published.
+- Our Development Rule: Because we deferred the login feature, we opened up read access for development purposes.
+  ```
+  // Example rule to allow anyone to read, but no one to write
+  match /containers/{containerId} {
+    allow read: if true;
+    allow write: if false;
+  }
+  ```
+
+---
+
+4. Cloud Functions: Our Serverless Backend
+
+- What they are: Pieces of backend code (we used Node.js) that live in the cloud. We don't have to manage a server; we just deploy the code, and Firebase runs it when it's called. This is how we implemented our AI assistant.
+- Deployment Workflow:
+  1. Write the code locally in a `functions` directory.
+  2. Use the `firebase-tools` CLI to deploy the code to the cloud.
+- Runtime Version: We learned that Firebase decommissions old Node.js runtimes. We had to edit `functions/package.json` to update the runtime engine to a supported version (e.g., from "18" to "20").
+  ```json
+  "engines": {
+    "node": "20"
+  }
+  ```
+- "Not Found" Error: When calling a function from the app, a `not-found` error usually means the function either failed to deploy or the app is looking in the wrong region.
+
+---
+
+5. Securely Managing API Keys (Secret Manager)
+
+- Problem: We needed to use the Gemini API key in our Cloud Function without putting it directly in the code (which is insecure).
+- Solution: We used the integrated Google Cloud Secret Manager.
+- Workflow:
+  1. We created the secret in the cloud.
+  2. We gave our Cloud Function's service account permission to access it (the "Secret Manager Secret Accessor" role).
+  3. We used a special command to link the secret to our function during deployment.
+- Code Reference: In `index.js`, the code `defineString('GEMINI_API_KEY')` tells the function to access the secret named `GEMINI_API_KEY`.
+
+---
+
+6. Firebase Command-Line Tool (firebase-tools)
+
+- Purpose: The main tool for managing a Firebase project from the terminal.
+- Installation/Update: `npm install -g firebase-tools`
+- Key Commands We Used:
+  - `firebase login`: To log into your Firebase account.
+  - `firebase --version`: To check the installed version (useful for debugging).
+  - `firebase init functions`: To create the necessary configuration files (`firebase.json`) for a functions project.
+  - `firebase functions:secrets:set GEMINI_API_KEY`: To create a new secret and set its value.
+  - `firebase deploy --only functions`: To deploy only the Cloud Functions code.
+
+---
+
+7. Understanding Deployment (Artifact Registry)
+
+- Container Images: We learned that when a function is deployed, it's packaged into a "container image" (a blueprint with the code, dependencies, and runtime).
+- Artifact Registry: This is the Google Cloud service where these images are stored.
+- Cleanup Policy: Firebase prompted us to set a cleanup policy to automatically delete old container images to prevent them from accumulating and potentially incurring a small storage cost. We chose 30 days as a reasonable policy for this project.

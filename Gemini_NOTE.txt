@@ -1,0 +1,123 @@
+NOTE: 
+(This Gemini_NOTE.txt can be used to take additional notes during the project workflow.)
+
+- The ESP32 folder holds the code in my ESP32
+- The aiot_fresh folder is the replica of folder in my rasberry Pi. I will convey all the changes made in it to my raspberry pi's aiot_fresh folder.
+
+DETAILED PROJECT COMPLETION PLAN:
+
+1. Complete the Pi-to-Cloud Sync Bridge
+   - Create a new Python script: cloud_sync.py.
+   - The script will run as a continuous loop, checking for work every 10-15 seconds.
+   - It will connect to the local aiot.db SQLite database.
+   - It will query the 'outbox' table to find unsynced data (telemetry, alerts, configs).
+   - It will initialize the Firebase Admin SDK using serviceAccount.json.
+   - For each item in the outbox, it will attempt to send it to the correct Firestore collection (e.g., 'telemetry', 'alerts', 'containers').
+   - Upon successful upload to Firestore, it will delete the item from the local 'outbox' table.
+   - If the upload fails (e.g., no internet), the item remains in the outbox to be retried later.
+   - This script needs robust error handling and logging.
+
+2. Finalize the Pi Portal
+   - Backend (in aiot_fresh/app.py):
+     - Implement the POST /api/devices/<id>/test-alert endpoint. This should create a sample alert in the local DB and queue it for cloud sync, allowing for end-to-end testing of the alert pipeline.
+     - Implement the GET /api/sync/status endpoint. This should return the number of items currently pending in the 'outbox' table.
+   - Frontend (in aiot_fresh/templates/dashboard.html and a new static JS file):
+     - Create a JavaScript file (e.g., static/js/dashboard.js) to make the dashboard dynamic.
+     - Use JavaScript to fetch data from the /api/devices endpoint.
+     - Dynamically create a list or table of all monitored containers on the dashboard.
+     - Display key telemetry data and device status (online/offline) for each container.
+     - Add a feature to periodically refresh the data from the API to create a live view.
+     - Add API endpoints in aiot_fresh/app.py to retrieve alerts for or all alerts (whichever is the easiest).
+     - Update the dashboard.html/dashboard.js to fetch and display these alerts.
+     - Implement a form within a modal or expandable section for editing device thresholds.
+     - This form, when submitted, will send the updated data to the POST /api/devices/<id>/thresholds endpoint.
+
+3. [COMPLETED] Build the React Native Mobile App (Read-Only)
+   - Initialize a new project using Expo (`npx create-expo-app`).
+   - Configure the Firebase client-side SDK for the mobile app.
+   - Implement two main screens:
+     - Dashboard Screen: Displays a real-time list of all containers by listening to the 'containers' collection in Firestore.
+     - Device Detail Screen: Shows detailed information for a selected container. It will display the latest telemetry and any alerts by listening to the corresponding Firestore sub-collections in real-time.
+   - Set up navigation between the screens.
+   - The UI will clearly display container data, including temperature, humidity, PPM, GPS location, and alerts, but will not allow editing.
+
+4. [COMPLETED] Develop the Gemini Chat Backend (Cloud)
+   - Create a new Firebase Cloud Function (Node.js or Python) to serve as the secure, scalable API endpoint for the AI chat feature.
+   - This function will accept a container_id and a user's question from the mobile app.
+   - It will connect to Firestore to fetch the recent history (telemetry, alerts, configuration) for the specified container.
+   - It will synthesize this data into a compact summary to build a context-rich prompt for the Gemini API.
+   - It will call the Gemini API and return the AI-generated answer to the mobile app.
+   - The Gemini API key will be stored securely using Firebase's environment variable or secret management, ensuring it is not exposed in the client app or on the Raspberry Pi.
+
+5. Write Tests, Documentation, and Deployment Files
+   - Testing:
+     - Create Python unit tests for the backend logic (e.g., using pytest). Focus on testing the threshold evaluation and data processing functions in mqtt_listener.py.
+   - Documentation:
+     - Create a markdown file (MQ4_CALIBRATION.md) with clear, step-by-step instructions on how to calibrate the MQ-4 gas sensor.
+   - Deployment:
+     - Create systemd service files (.service) for the three backend processes:
+       - mqtt_listener.py (the main data processor)
+       - cloud_sync.py (the new cloud sync bridge)
+       - The Flask portal (using gunicorn as the production server).
+     - These files will ensure the services run automatically on Pi startup and restart if they fail.
+
+
+-----
+
+IMPORTANT SCOPE CHANGE (As of 2025-12-10):
+- Food type management has been simplified.
+- The 'food_types' table is no longer used for providing default thresholds to devices.
+- 'selected_food_type' for each device is now a simple text field, editable alongside thresholds in the main dashboard modal.
+- All device thresholds are managed exclusively via the 'threshold_overrides' for each container.
+- The "Admin (food_type editor)" page is no longer required and has been removed from the scope.
+
+NEW FEATURE (As of 2025-12-10):
+- Added a "Clear Alerts" feature to the portal.
+- A "Clear Alerts" button is now present on each device card.
+- This feature permanently deletes all alerts for that specific device from the local database.
+
+NEW FEATURE (As of 2025-12-10):
+- Added a live-updating UTC clock to the dashboard header, displayed next to the logout button.
+- Alert timestamps are now explicitly formatted as UTC (using `.toUTCString()`) for consistent display.
+
+BUG FIX (As of 2025-12-10):
+- Fixed an issue where devices on the portal dashboard were always showing "OFFLINE" due to client-server clock skew.
+- The online/offline status is now determined authoritatively on the server-side (`app.py`) by comparing `last_seen` timestamps to the server's current UTC time.
+- The frontend (`dashboard.js`) now simply uses the `status` provided by the backend.
+
+TEMPORARY WORKAROUND / USER PREFERENCE (As of 2025-12-10):
+- Alert timestamps in the dashboard are now displayed using the browser's local time (`.toLocaleString()`).
+- This decision was made for immediate simplicity, despite the fact that the underlying time value sent from the backend is timezone-naive UTC and, when parsed by JavaScript, results in an incorrect time relative to the actual UTC event time.
+- The proper fix would involve modifying the backend to send timezone-aware ISO 8601 timestamps (ending in 'Z') to ensure correct UTC parsing by JavaScript, allowing for accurate display in either local or UTC time. This proper fix is deferred for now.
+
+-----
+
+ARCHITECTURAL REFINEMENT (As of 2025-12-11):
+- The Firestore data structure has been refactored to a more robust, nested model. This was an iterative process that involved debugging a "path must have an odd number of elements" error.
+- Final Structure: Data is now stored in subcollections within the main container document (e.g., `containers/{containerId}/telemetry/{timestamp}`). This is a clean, scalable, and idiomatic Firestore pattern.
+- The `mqtt_listener.py` script was updated to generate the correct paths, and `firestore.rules` was updated to secure the new structure.
+
+USER PREFERENCE / TECHNICAL NOTE (As of 2025-12-11):
+- Per user request, the document ID for telemetry and alert records in Firestore is the ISO 8601 timestamp string from the data payload.
+- The user has acknowledged the risk of data loss due to timestamp collisions. This decision was made to favor human-readable IDs and can be reverted to use Firestore's auto-generated IDs if data loss becomes a concern.
+
+NEW FEATURE (As of 2025-12-11):
+- Implemented stateful alerting in `mqtt_listener.py` to prevent alert spam. The listener now checks the local database for existing, unresolved alerts before creating a new one. It also automatically marks alerts as "resolved" when the condition clears.
+
+SYSTEM DEPLOYMENT (As of 2025-12-11):
+- Created and documented `systemd` service files for `mqtt_listener.py`, `cloud_sync.py`, and the `portal.service` (using Gunicorn). This enables the entire backend application to start automatically on boot and be managed as a robust set of services. Instructions are captured in `pi_system.txt`.
+
+-----
+
+MOBILE APP SCOPE EXPANSION (As of 2025-12-12):
+- The mobile app has evolved from a basic read-only skeleton to a full-featured application. The expanded feature set includes:
+  - User Authentication: A complete login/registration system using Firebase Authentication.
+  - Full-Featured Interface: A multi-tab navigation system for Home, AI, and Settings pages.
+  - Health Meter: A calculated, at-a-glance "health score" for each container on the dashboard.
+  - Advanced AI Page: A dedicated page for AI interaction, powered by a Firebase Cloud Function, offering a general Q&A chatbot, a system-wide summary, and downloadable audit reports.
+  - Push Notifications: Integration with Firebase Cloud Messaging to receive real-time critical alerts.
+
+-----
+
+TECHNICAL NOTE (As of 2025-12-15):
+- After debugging deployment and runtime errors, the AI Cloud Function was successfully implemented using the `gemini-2.5-flash` model. This was chosen after `gemini-pro` and `gemini-1.0-pro` failed, likely due to regional availability or versioning issues. The Node.js runtime for the function was also updated to version 20 to resolve a decommissioning error.

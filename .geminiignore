@@ -1,0 +1,26 @@
+# This file tells Gemini what to ignore, similar to .gitignore.
+# You should list files, directories, and patterns for anything you don't want Gemini to read or modify.
+#
+# Best Practice: Ignore dependencies, build outputs, secrets, and the .gemini directory itself.
+
+# Gemini internal files
+.gemini/
+
+# Dependencies
+# node_modules/
+# vendor/
+# dist/
+# build/
+
+# Logs
+# *.log
+# npm-debug.log*
+# yarn-debug.log*
+
+# Environment variables
+# .env
+# .env.*
+
+# OS-specific
+# .DS_Store
+# Thumbs.db

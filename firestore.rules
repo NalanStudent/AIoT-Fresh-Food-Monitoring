@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Allow mobile app read access to the list of containers and their config.
+    // Deny writes, as only the Pi can change config.
+    match /containers/{containerId} {
+      allow read: if true;
+      allow write: if false; 
+    }
+
+    // Food types are public read-only for the app
+    match /food_types/{foodId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // --- NEW RULES FOR NESTED DATA ---
+
+    // Allow mobile app read access to the 'telemetry' subcollection within a container.
+    // Deny writes, as only the Pi can write telemetry.
+    match /containers/{containerId}/telemetry/{readingId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Allow mobile app read access to the 'alerts' subcollection within a container.
+    // Deny writes, as only the Pi can create alerts.
+    match /containers/{containerId}/alerts/{alertId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

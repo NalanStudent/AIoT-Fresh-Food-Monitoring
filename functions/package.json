@@ -1,0 +1,14 @@
+{
+  "name": "aiot-cloud-functions",
+  "description": "Cloud Functions for the AIoT Fresh Monitor project.",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.11.3",
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.1"
+  },
+  "private": true
+}

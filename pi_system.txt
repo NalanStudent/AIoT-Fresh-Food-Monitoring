@@ -1,0 +1,92 @@
+This file documents the systemd services required to run the AIoT Fresh application stack on a Raspberry Pi.
+
+Step 1: Create the Service Files
+On your Raspberry Pi, create the three service files in /etc/systemd/system/.
+
+Important: The paths below assume your project is at /var/lib/aiot_freshX and you are using a virtual environment named venv. Change these paths if your setup is different.
+
+File 1: /etc/systemd/system/mqtt_listener.service
+[Unit]
+Description=AIoT Fresh MQTT Listener Service
+After=network.target mosquitto.service
+
+[Service]
+User=n-pi
+WorkingDirectory=/var/lib/aiot_freshX
+ExecStart=/var/lib/aiot_freshX/venv/bin/python -u /var/lib/aiot_freshX/mqtt_listener.py
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+File 2: /etc/systemd/system/cloud_sync.service (This was the missing service)
+[Unit]
+Description=AIoT Fresh Cloud Sync Service
+After=network-online.target
+
+[Service]
+User=n-pi
+WorkingDirectory=/var/lib/aiot_freshX
+ExecStart=/var/lib/aiot_freshX/venv/bin/python -u /var/lib/aiot_freshX/cloud_sync.py
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+File 3: /etc/systemd/system/portal.service
+[Unit]
+Description=AIoT Fresh Portal Service
+After=network-online.target
+
+[Service]
+User=n-pi
+WorkingDirectory=/var/lib/aiot_freshX
+ExecStart=/var/lib/aiot_freshX/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+
+Step 2: Enable and Start the Services
+Once the files are created, run these commands in your Raspberry Pi terminal.
+
+1. Reload the systemd daemon:
+sudo systemctl daemon-reload
+
+2. Enable all three services to start on boot:
+sudo systemctl enable mosquitto.service
+sudo systemctl enable mqtt_listener.service
+sudo systemctl enable cloud_sync.service
+sudo systemctl enable portal.service
+
+3. Start all three services immediately:
+sudo systemctl start mqtt_listener.service
+sudo systemctl start cloud_sync.service
+sudo systemctl start portal.service
+
+Step 3: Verify and Manage the Services
+Use these commands to manage your running application.
+
+Check the status of a service:
+sudo systemctl status mqtt_listener.service
+sudo systemctl status cloud_sync.service
+sudo systemctl status portal.service
+
+View live logs for a service (press Ctrl+C to exit):
+sudo journalctl -u mqtt_listener.service -f
+
+Restart a service after changing its Python code:
+sudo systemctl restart portal.service
+
+Stop a service:
+sudo systemctl stop cloud_sync.service
+
+ADDITIONAL COMMANDS
+Test MQTT Message:
+mosquitto_pub -h localhost -t "containers/container-001/telemetry" -m '{ "device_id": "container-001", "timestamp": "2025-09-10T07:12:34Z", "temperature_c": 4.2, "humidity_pct": 92.3, "mq4_ppm": 120, "gps": { "lat": 2.984472, "lon": 101.431972, "fix": true, "satellites": 9 } }'
