@@ -10,28 +10,28 @@ const SettingsScreen = () => {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <List.Section style={styles.section}>
-        <List.Subheader>Appearance</List.Subheader>
+        <List.Subheader style={{ color: theme.colors.onSurface }}>Appearance</List.Subheader>
         <List.Item
           title="Dark Mode"
-          left={() => <List.Icon icon="theme-light-dark" />}
+          left={() => <List.Icon icon="theme-light-dark" style={{ marginLeft: 16 }} />}
           right={() => <Switch value={isDark} onValueChange={toggleTheme} />}
         />
       </List.Section>
 
       <List.Section style={styles.section}>
-        <List.Subheader>Notifications</List.Subheader>
+        <List.Subheader style={{ color: theme.colors.onSurface }}>Notifications</List.Subheader>
          <List.Item
           title="Push Alerts"
-          left={() => <List.Icon icon="bell" />}
+          left={() => <List.Icon icon="bell" style={{ marginLeft: 16 }} />}
           right={() => <Switch value={true} disabled />} // Placeholder
         />
       </List.Section>
 
       <List.Section style={styles.section}>
-        <List.Subheader>Account</List.Subheader>
+        <List.Subheader style={{ color: theme.colors.onSurface }}>Account</List.Subheader>
          <List.Item
           title="Logout"
-          left={() => <List.Icon icon="logout" />}
+          left={() => <List.Icon icon="logout" style={{ marginLeft: 16 }} />}
           onPress={() => console.log("Logout pressed")} // Placeholder
         />
       </List.Section>

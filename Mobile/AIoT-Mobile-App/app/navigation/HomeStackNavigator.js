@@ -22,7 +22,7 @@ const HomeStackNavigator = () => {
       <Stack.Screen 
         name="HomeDashboard" // A unique name for the screen in this stack
         component={HomeScreen} 
-        options={{ headerShown: false }} // We'll use the header from the tab navigator
+        options={{ title: 'AIoT Fresh Monitor' }} // Show header and set title
       />
       <Stack.Screen 
         name="DeviceDetail" 

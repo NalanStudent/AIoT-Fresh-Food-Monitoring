@@ -95,7 +95,7 @@ def evaluate_telemetry(telemetry, thresholds):
 
 def create_alert(conn, device_id, alert_info):
     cursor = conn.cursor()
-    ts = datetime.utcnow().isoformat()
+    ts = datetime.utcnow().isoformat() + 'Z'
     cursor.execute("""
         INSERT INTO alerts (container_id, alert_type, level, message, timestamp)
         VALUES (?, ?, ?, ?, ?)
@@ -130,6 +130,22 @@ def add_to_outbox(conn, kind, target_path, payload):
     """, (kind, target_path, json.dumps(payload), datetime.utcnow().isoformat()))
     conn.commit()
 
+def update_container_summary_in_outbox(conn, device_id, telemetry_payload):
+    """
+    Prepares and adds a container summary update to the outbox for Firestore.
+    This includes latest telemetry, last_seen timestamp, and status.
+    """
+    update_data = {
+        "last_seen": telemetry_payload.get("timestamp", datetime.utcnow().isoformat()),
+        "status": {
+            "state": "online",
+            "last_update": telemetry_payload.get("timestamp", datetime.utcnow().isoformat())
+        },
+        "latest_telemetry": telemetry_payload
+    }
+    add_to_outbox(conn, "container_summary", f"containers/{device_id}", update_data)
+
+
 # ---------------------------
 # MQTT Event Handlers
 # ---------------------------
@@ -149,9 +165,12 @@ def on_message(client, userdata, msg):
 
         # Step 1: Standard processing (status update, telemetry logging)
         init_container_if_missing(conn, device_id, payload.get("selected_food_type", "unknown"))
-        update_container_status(conn, device_id)
+        update_container_status(conn, device_id) # This updates local SQLite, but Firestore needs the 'outbox'
         insert_telemetry(conn, device_id, payload)
         add_to_outbox(conn, "telemetry", f"containers/{device_id}/telemetry", payload)
+        
+        # Step 1.5: Update the container's summary in Firestore via outbox
+        update_container_summary_in_outbox(conn, device_id, payload)
 
         # Step 2: Stateful Alert Evaluation
         thresholds = get_merged_thresholds(conn, device_id)

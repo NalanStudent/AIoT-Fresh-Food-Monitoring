@@ -138,3 +138,57 @@ Mobile Application Development & AI Integration
 -   Final Integration:
     -   Successfully deployed the `askGemini` cloud function.
     -   Integrated the mobile app's `AIScreen` with the live cloud function, replacing the mock UI with a fully functional AI assistant.
+
+
+Monday, 15 December 2025
+
+Git Repository Setup:
+- Removed `Mobile/AIoT-Mobile-App/.git` to resolve nested repository issue.
+- Initialized a new Git repository in the `Project` root.
+- Updated `.gitignore` to exclude sensitive files (`serviceAccount.json`, `.gemini/`, etc.) and common build artifacts.
+- Performed initial commit of all project files.
+- Linked local repository to GitHub remote (`https://github.com/NalanStudent/AIoT-Fresh-Food-Monitoring.git`).
+- Amended the initial commit message to "v1.0" and force-pushed to GitHub.
+
+
+Tuesday, 16 December 2025 - Wednesday, 17 December 2025
+
+
+1. Mobile App Web Compatibility:
+    * Implemented platform-specific DeviceMap components to prevent crashes when running the mobile app on the web.
+2. Backend Data Flow & Synchronization:
+    * Fixed root cause of missing data: Modified aiot_fresh/mqtt_listener.py to correctly update the container
+      document in Firestore with latest_telemetry, last_seen, and status.
+    * Enabled cloud sync for container summaries: Updated aiot_fresh/cloud_sync.py to properly process and sync the
+      new container_summary data from the local outbox to Firestore.
+    * Result: Live telemetry data, correct online/offline status, and "last seen" timestamps are now flowing
+      correctly to the mobile app.
+3. Mobile App UI Improvements:
+    * Home Screen Header: Added a proper header to the Home screen.
+    * Improved Status Indicator: Made the online/offline status more explicit on the Home screen's container cards.
+    * Cleaned Temperature Chart: Reduced x-axis label overlap on the Device Detail screen's temperature graph.
+4. Mobile App Data Formatting & Features:
+    * Fixed `useState` syntax error: Corrected a typo in DeviceDetailScreen.js.
+    * Fixed Alert Timezone: Ensured alert timestamps saved from the Pi backend are explicitly UTC, allowing the
+      mobile app to display them correctly in local time.
+    * Implemented "Last Hour Alerts": Modified DeviceDetailScreen.js to dynamically show only alerts from the last
+      hour, making the "Recent Alerts" list self-maintaining.
+5. Ongoing Issue (On Hold):
+    * We've encountered a persistent "Text strings must be rendered within a <Text> component" error on the Device
+      Detail screen, which occurs only when GPS data is missing (i.e., when the map is not shown).
+    * Multiple code-based fixes have been attempted, but the error persists. It is likely an environmental issue
+      (caching) or a very subtle problem in a dependency. This issue is currently on hold as you have a workaround
+      (ensuring GPS data is present makes the error disappear).
+
+Friday, 19 December 2025
+
+Backend Reliability & AI
+- Implemented a scheduled Cloud Function (`markStaleDevicesOffline`) to run every 5 minutes. This function acts as a robust safety net, querying Firestore for any devices marked as "online" but that haven't sent data recently, and forcibly sets their status to "offline". This resolves a key architectural flaw.
+- Fixed a critical bug in the `askGemini` Cloud Function where it would fail to gather context for general queries. The logic was updated to ensure that if no specific container ID is provided, a summary of all containers is always fetched and sent to the AI.
+- Corrected a model name regression in the `askGemini` function, ensuring it uses the intended `gemini-2.5-flash` model.
+
+Mobile App UX & AI Features
+- Fixed the "Text strings must be rendered within a <Text> component" crash on the `DeviceDetailScreen` by replacing a faulty conditional render (`&&`) with a robust ternary operator (`? : null`).
+- Enhanced the "GPS Location" card to be always visible, showing the map when data is present and a "Current Location not Found..." message when it is not.
+- Implemented a new feature on the `AIScreen`: a "Focus" dropdown that allows users to select a specific container. This enables the AI assistant to answer questions about a single container.
+- Created `Mobile/Ai_features.md`, a comprehensive roadmap detailing current, planned, and proposed new AI features, including implementation details and demonstration test cases.

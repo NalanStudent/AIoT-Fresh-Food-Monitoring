@@ -46,7 +46,8 @@ const ContainerCard = ({ container, onPress }) => {
         <Card.Content>
           <View style={styles.header}>
             <Text variant="titleMedium" style={{ fontWeight: 'bold' }}>{device_id}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: isOnline ? theme.colors.success : theme.colors.disabled }]}>
+            <View style={styles.statusContainer}>
+              <View style={[styles.statusIndicator, { backgroundColor: isOnline ? theme.colors.success : theme.colors.disabled }]} />
               <Text style={styles.statusText}>{isOnline ? 'Online' : 'Offline'}</Text>
             </View>
           </View>
@@ -95,14 +96,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  statusIndicator: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   statusText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: 'bold',
   },
   cargoText: {

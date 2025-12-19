@@ -121,3 +121,15 @@ MOBILE APP SCOPE EXPANSION (As of 2025-12-12):
 
 TECHNICAL NOTE (As of 2025-12-15):
 - After debugging deployment and runtime errors, the AI Cloud Function was successfully implemented using the `gemini-2.5-flash` model. This was chosen after `gemini-pro` and `gemini-1.0-pro` failed, likely due to regional availability or versioning issues. The Node.js runtime for the function was also updated to version 20 to resolve a decommissioning error.
+
+-----
+
+ARCHITECTURAL REFINEMENT & AI ENHANCEMENT (As of 2025-12-19):
+- Implemented a scheduled Cloud Function (`markStaleDevicesOffline`) as a robust "safety net" to handle device status. This function runs every 5 minutes and marks any device that has not sent telemetry in that period as "offline". This is a user-driven architectural improvement that adds a layer of reliability on top of the MQTT LWT mechanism.
+- Fixed a critical logic bug in the `askGemini` Cloud Function. The function now correctly provides a summary of all containers as context for general queries, making the AI assistant significantly more useful.
+- Added a "Focus" dropdown to the mobile app's AI screen, allowing users to select a specific container for their queries. This enables the AI assistant's specific-query functionality.
+- Created `Ai_features.md`, a comprehensive roadmap and demonstration guide for all current, planned, and proposed AI features, including implementation details and test cases.
+
+BUG FIX (As of 2025-12-19):
+- Fixed a subtle but critical rendering crash on the mobile app's `DeviceDetailScreen`. The crash, caused by using the `&&` operator for conditional rendering with a potentially `0` value, was resolved by switching to a more robust ternary (`? : null`) operator.
+- Enhanced the GPS card to always be visible, providing a "Location not Found" message for better user feedback when GPS data is unavailable.

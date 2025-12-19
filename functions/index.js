@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -6,6 +7,9 @@ const { defineString } = require('firebase-functions/params');
 
 // Initialize Firebase Admin SDK
 initializeApp();
+
+
+// --- Gemini AI Assistant Function ---
 
 // Define the GEMINI_API_KEY as a secret parameter
 const geminiApiKey = defineString('GEMINI_API_KEY');
@@ -15,11 +19,6 @@ const genAI = new GoogleGenerativeAI(geminiApiKey.value());
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 exports.askGemini = onCall(async (request) => {
-  // Basic check to ensure the user is authenticated (if you add auth later)
-  // if (!request.auth) {
-  //   throw new HttpsError('unauthenticated', 'You must be logged in to use the AI assistant.');
-  // }
-
   const { prompt, containerId } = request.data;
   if (!prompt) {
     throw new HttpsError('invalid-argument', 'The function must be called with a "prompt".');
@@ -52,7 +51,7 @@ Current date: ${new Date().toUTCString()}`;
       } else {
         dataSummary = `No data found for Container ID: ${containerId}`;
       }
-    } else if (prompt.toLowerCase().includes('all containers') || prompt.toLowerCase().includes('summary')) {
+    } else {
        // Fetch data for all containers
        const snapshot = await db.collection('containers').get();
        if (snapshot.empty) {
@@ -84,3 +83,47 @@ Current date: ${new Date().toUTCString()}`;
     throw new HttpsError('internal', 'An error occurred while processing your request.');
   }
 });
+
+
+// --- Scheduled Staleness Check Function ---
+
+exports.markStaleDevicesOffline = onSchedule("every 5 minutes", async (event) => {
+  const db = getFirestore();
+  const now = new Date();
+  const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+  // Query for devices that are 'online' but haven't been seen in the last 5 minutes
+  const staleDevicesQuery = db.collection('containers')
+    .where('status.state', '==', 'online')
+    .where('last_seen', '<', fiveMinutesAgo.toISOString());
+
+  try {
+    const querySnapshot = await staleDevicesQuery.get();
+
+    if (querySnapshot.empty) {
+      console.log("No stale devices found.");
+      return;
+    }
+
+    // Use a bulk writer for efficient updates
+    const bulkWriter = db.bulkWriter();
+    let staleDeviceCount = 0;
+
+    querySnapshot.forEach(doc => {
+      staleDeviceCount++;
+      const docRef = db.collection('containers').doc(doc.id);
+      bulkWriter.update(docRef, { 
+        'status.state': 'offline',
+        'status.reason': 'Stale data detected by Cloud Function.',
+        'status.last_update': now.toISOString()
+      });
+    });
+
+    await bulkWriter.close();
+    console.log(`Successfully marked ${staleDeviceCount} stale devices as offline.`);
+
+  } catch (error) {
+    console.error("Error running markStaleDevicesOffline function:", error);
+  }
+});
+

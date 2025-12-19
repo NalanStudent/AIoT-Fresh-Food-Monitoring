@@ -280,3 +280,8 @@ SUMMARY OF DEVIATIONS FROM ORIGINAL `gemini.md` SPECIFICATION (As of 2025-12-10)
 6.  Expanded Mobile App Scope (As of 2025-12-12):
     -   Original Spec (Section 10.8): Described a "basic app... skeleton" for read-only monitoring.
     -   Current Implementation: The mobile app's role has been expanded to a full-featured application, including a user login system (Firebase Authentication), a multi-tab interface (Home, AI, Settings), a calculated 'Health Meter' on the dashboard, a comprehensive 'AI Page' (powered by a Cloud Function) for chatbot Q&A, system-wide summaries, and downloadable reports, and real-time push notifications for critical alerts.
+
+7.  Architectural Enhancement: Cloud-Based Status Reliability:
+    
+    - Original Spec (Section 3.2): Relied exclusively on the Pi being online to process MQTT LWT messages to mark devices as offline.
+    - Current Implementation: A hybrid model has been implemented. In addition to the (currently deferred) MQTT listener fix, a scheduled Cloud Function (`markStaleDevicesOffline`) now runs every 5 minutes. This function acts as a reliable safety net, checking for stale devices and marking them as offline directly in the cloud, ensuring the system's accuracy even if the Pi is disconnected. This was a user-driven architectural improvement.    

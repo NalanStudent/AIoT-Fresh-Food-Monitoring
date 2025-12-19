@@ -117,6 +117,15 @@ def sync_config(payload, target_path):
     doc_ref.set(update_data, merge=True) # Use merge=True to only update specified fields
     print(f"Synced config for {container_id} to {doc_ref.path}")
 
+def sync_container_summary(payload, target_path):
+    """Handles the 'container_summary' kind to update the main container doc."""
+    if not db:
+        raise Exception("Firebase not initialized.")
+    
+    # target_path will be "containers/{container_id}"
+    doc_ref = db.document(target_path)
+    doc_ref.update(payload) # Use update to merge the new summary data
+    print(f"Synced container summary to {doc_ref.path}")
 
 def process_outbox_item(conn, item):
     item_id = item["id"]
@@ -131,6 +140,8 @@ def process_outbox_item(conn, item):
             sync_alert(payload, target_path)
         elif kind == "config":
             sync_config(payload, target_path)
+        elif kind == "container_summary":
+            sync_container_summary(payload, target_path)
         else:
             print(f"Unknown item kind in outbox: {kind}. Deleting item {item_id}.")
             delete_outbox_item(conn, item_id)
