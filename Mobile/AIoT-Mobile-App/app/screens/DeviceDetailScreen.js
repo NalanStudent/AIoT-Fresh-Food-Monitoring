@@ -6,6 +6,27 @@ import { LineChart } from 'react-native-chart-kit';
 
 import { db } from '../services/firebaseConfig';
 import DeviceMap from '../components/DeviceMap';
+import HealthMeter from '../components/HealthMeter';
+
+const calculateHealth = (telemetry, thresholds) => {
+  if (!telemetry || !thresholds) return 100; 
+  const { mq4_ppm } = telemetry;
+  const { mq4 } = thresholds;
+
+  if (mq4_ppm === undefined || mq4_ppm === null || !mq4) return 100;
+  const { warn, critical } = mq4;
+  if (warn === undefined || warn === null || critical === undefined || critical === null) return 100;
+
+  if (mq4_ppm >= critical) return 0;
+  if (mq4_ppm < warn) {
+      const health = 100 - (mq4_ppm / warn) * 50;
+      return Math.round(Math.max(50, health));
+  }
+  const range = critical - warn;
+  if (range <= 0) return 0;
+  const health = 50 - ((mq4_ppm - warn) / range) * 50;
+  return Math.round(Math.max(0, health));
+};
 
 const DeviceDetailScreen = ({ route }) => {
   const theme = useTheme();
@@ -58,6 +79,7 @@ const DeviceDetailScreen = ({ route }) => {
 
   const latestTelemetry = container?.latest_telemetry || {};
   const isOnline = container?.status?.state === 'online';
+  const healthPercentage = calculateHealth(latestTelemetry, container?.threshold_overrides || {});
 
   const chartConfig = {
     backgroundGradientFrom: theme.colors.surface,
@@ -85,8 +107,14 @@ const DeviceDetailScreen = ({ route }) => {
       {/* Status Summary Card */}
       <Card style={[styles.card, {backgroundColor: theme.colors.surface}]}>
         <Card.Content>
-          <Text style={styles.title}>Status Summary</Text>
-          <Text>Food Type: {container?.selected_food_type || 'N/A'}</Text>
+          <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+            <Text style={styles.title}>Status Summary</Text>
+            <Text style={{fontWeight: 'bold', color: healthPercentage > 75 ? theme.colors.success : theme.colors.error}}>
+                {healthPercentage}%
+            </Text>
+          </View>
+          <HealthMeter percentage={healthPercentage} />
+          <Text style={{marginTop: 10}}>Food Type: {container?.selected_food_type || 'N/A'}</Text>
           <Text>Status: {isOnline ? 'Online' : 'Offline'}</Text>
           <Text>Last Seen: {container?.last_seen ? new Date(container.last_seen).toLocaleString() : 'N/A'}</Text>
         </Card.Content>

@@ -4,26 +4,42 @@ import { Card, Text, useTheme } from 'react-native-paper';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import HealthMeter from './HealthMeter';
 
-// A simple utility to calculate health based on one metric.
-// In a real app, this would be more complex, considering all metrics.
+// Improved Health Calculation based on MQ4 (Gas) levels
 const calculateHealth = (telemetry, thresholds) => {
   if (!telemetry || !thresholds) return 100; // Default to healthy if no data
 
-  const { temperature_c } = telemetry;
-  const { temperature } = thresholds;
+  const { mq4_ppm } = telemetry;
+  const { mq4 } = thresholds;
 
-  if (!temperature || temperature_c === undefined) return 100;
+  // If no MQ4 data or no thresholds set, assume healthy
+  if (mq4_ppm === undefined || mq4_ppm === null || !mq4) return 100;
 
-  const { warn, critical } = temperature;
+  const { warn, critical } = mq4;
 
-  if (temperature_c >= critical) return 25;
-  if (temperature_c >= warn) return 50;
+  // If thresholds are missing, return 100
+  if (warn === undefined || warn === null || critical === undefined || critical === null) return 100;
 
-  // Simple linear scale from warn (51%) to healthy (100%)
-  const safeRange = warn - 5; // Assuming 'healthy' is 5 degrees below warn
-  const health = Math.max(51, ((warn - temperature_c) / (warn - safeRange)) * 49 + 51);
+  // 1. Critical or above: 0% Health (Spoiled)
+  if (mq4_ppm >= critical) return 0;
+
+  // 2. Below Warning: 100% - 50% Health (Linear scaling)
+  // Logic: 0 ppm = 100%, Warn ppm = 50%
+  if (mq4_ppm < warn) {
+      // Scale: 0 -> 100%, warn -> 50%
+      // Formula: 100 - (ppm / warn) * 50
+      // Example: warn=100. ppm=0 -> 100%. ppm=50 -> 75%. ppm=100 -> 50%.
+      const health = 100 - (mq4_ppm / warn) * 50;
+      return Math.round(Math.max(50, health));
+  }
+
+  // 3. Between Warning and Critical: 50% - 0% Health (Rapid drop)
+  // Logic: Warn = 50%, Critical = 0%
+  // Formula: 50 - ((ppm - warn) / (critical - warn)) * 50
+  const range = critical - warn;
+  if (range <= 0) return 0; // Avoid division by zero
   
-  return Math.min(100, Math.round(health));
+  const health = 50 - ((mq4_ppm - warn) / range) * 50;
+  return Math.round(Math.max(0, health));
 };
 
 

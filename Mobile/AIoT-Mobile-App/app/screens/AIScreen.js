@@ -6,6 +6,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '../services/firebaseConfig';
 import { Picker } from '@react-native-picker/picker';
+import Markdown from 'react-native-markdown-display';
 
 // Get a reference to the functions service
 const functions = getFunctions();
@@ -21,8 +22,11 @@ const initialMessages = [
 
 const promptChips = [
   "What is the status of all containers?",
-  "Any critical alerts?",
-  "Forecast temperature for container-001",
+  "Summarize alerts from the last 24 hours",
+  "Forecast temperature for this container",
+  "Why did the last alert happen?",
+  "Should I reroute this container to Dallas?",
+  "Generate a status report",
 ];
 
 const AIScreen = ({ navigation }) => {
@@ -112,7 +116,7 @@ const AIScreen = ({ navigation }) => {
   const renderMessage = ({ item, index }) => {
     const isUser = item.sender === 'user';
     const messageStyle = isUser ? styles.userMessage : styles.aiMessage;
-    const textStyle = { color: isUser ? theme.colors.text : theme.colors.text };
+    const textStyle = { color: theme.colors.text };
     const bubbleStyle = { 
       backgroundColor: isUser ? theme.colors.accent + '80' : theme.colors.surface 
     };
@@ -130,7 +134,14 @@ const AIScreen = ({ navigation }) => {
     return (
       <View style={[styles.messageContainer, messageStyle]}>
         <View style={[styles.bubble, bubbleStyle]}>
-          <Text style={textStyle}>{item.text}</Text>
+          {isUser ? (
+            <Text style={textStyle}>{item.text}</Text>
+          ) : (
+            <Markdown style={{ 
+                body: { color: theme.colors.text },
+                inline_code: { backgroundColor: 'transparent', color: '#FFEB3B' } // Yellow color for inline code
+            }}>{item.text}</Markdown>
+          )}
         </View>
       </View>
     );

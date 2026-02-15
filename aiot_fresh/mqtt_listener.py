@@ -91,6 +91,13 @@ def evaluate_telemetry(telemetry, thresholds):
         if "warn_low" in thresholds["humidity"] and humidity < thresholds["humidity"]["warn_low"]:
             alerts.append({"type": "humidity", "level": "warn", "message": f"Low humidity: {humidity}%"})
     
+    mq4 = telemetry.get("mq4_ppm")
+    if mq4 is not None and "mq4" in thresholds:
+        if "critical" in thresholds["mq4"] and mq4 > thresholds["mq4"]["critical"]:
+            alerts.append({"type": "mq4", "level": "critical", "message": f"Critical Gas Level: {mq4} ppm"})
+        elif "warn" in thresholds["mq4"] and mq4 > thresholds["mq4"]["warn"]:
+            alerts.append({"type": "mq4", "level": "warn", "message": f"High Gas Level: {mq4} ppm"})
+
     return alerts
 
 def create_alert(conn, device_id, alert_info):

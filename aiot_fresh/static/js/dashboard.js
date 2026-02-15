@@ -149,6 +149,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('temp-crit').value = overrides.temperature?.critical || '';
             document.getElementById('hum-low').value = overrides.humidity?.warn_low || '';
             document.getElementById('hum-high').value = overrides.humidity?.warn_high || '';
+            document.getElementById('mq4-warn').value = overrides.mq4?.warn || '';
+            document.getElementById('mq4-crit').value = overrides.mq4?.critical || '';
             
             modal.style.display = 'block';
         } catch (error) {
@@ -222,6 +224,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 humidity: {
                     warn_low: parseFloat(document.getElementById('hum-low').value) || null,
                     warn_high: parseFloat(document.getElementById('hum-high').value) || null,
+                },
+                mq4: {
+                    warn: parseFloat(document.getElementById('mq4-warn').value) || null,
+                    critical: parseFloat(document.getElementById('mq4-crit').value) || null,
                 }
             }
         };

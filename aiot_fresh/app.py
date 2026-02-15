@@ -70,6 +70,14 @@ def dashboard():
     return render_template('dashboard.html')
 
 # ---------------------------
+# DB Admin Page (HTML)
+# ---------------------------
+@app.route('/admin/db')
+@require_auth
+def admin_db():
+    return render_template('admin_db.html')
+
+# ---------------------------
 # /api/devices
 # ---------------------------
 @app.route("/api/devices", methods=["GET"])
@@ -261,6 +269,106 @@ def update_thresholds(device_id):
     except Exception as e:
         if conn:
             conn.close()
+        return jsonify({"error": str(e)}), 500
+
+# ---------------------------
+# DB Admin APIs
+# ---------------------------
+@app.route("/api/admin/tables", methods=["GET"])
+@login_required
+def get_tables():
+    if not os.path.exists(DB_PATH):
+        return jsonify({"error": "DB not found"}), 500
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = [row[0] for row in cursor.fetchall()]
+        conn.close()
+        return jsonify({"tables": tables})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/admin/table/<table_name>", methods=["GET"])
+@login_required
+def get_table_content(table_name):
+    if not os.path.exists(DB_PATH):
+        return jsonify({"error": "DB not found"}), 500
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        # Verify table name to prevent SQL injection
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (table_name,))
+        if not cursor.fetchone():
+             conn.close()
+             return jsonify({"error": "Invalid table name"}), 400
+
+        # Fetch column names
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns = [info[1] for info in cursor.fetchall()]
+        pk_column = columns[0] if columns else None # Assume first column is PK for simplicity
+
+        # Fetch last 100 rows
+        order_clause = f"ORDER BY {pk_column} DESC" if pk_column else ""
+        cursor.execute(f"SELECT * FROM {table_name} {order_clause} LIMIT 100")
+        rows = [dict(row) for row in cursor.fetchall()]
+        
+        conn.close()
+        return jsonify({"columns": columns, "rows": rows, "pk": pk_column})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/admin/table/<table_name>/row/<row_id>", methods=["DELETE"])
+@login_required
+def delete_table_row(table_name, row_id):
+    if not os.path.exists(DB_PATH):
+        return jsonify({"error": "DB not found"}), 500
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Verify table exists
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (table_name,))
+        if not cursor.fetchone():
+             conn.close()
+             return jsonify({"error": "Invalid table name"}), 400
+             
+        # Determine PK
+        cursor.execute(f"PRAGMA table_info({table_name})")
+        columns_info = cursor.fetchall()
+        pk_column = next((info[1] for info in columns_info if info[5] == 1), columns_info[0][1] if columns_info else None)
+
+        if not pk_column:
+             conn.close()
+             return jsonify({"error": "Table has no primary key"}), 400
+
+        cursor.execute(f"DELETE FROM {table_name} WHERE {pk_column}=?", (row_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success", "message": f"Deleted row {row_id} from {table_name}"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/admin/table/<table_name>", methods=["DELETE"])
+@login_required
+def clear_table(table_name):
+    if not os.path.exists(DB_PATH):
+        return jsonify({"error": "DB not found"}), 500
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Verify table
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?;", (table_name,))
+        if not cursor.fetchone():
+             conn.close()
+             return jsonify({"error": "Invalid table name"}), 400
+
+        cursor.execute(f"DELETE FROM {table_name}")
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "success", "message": f"Cleared all data from {table_name}"})
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 def create_alert(conn, device_id, alert_info):

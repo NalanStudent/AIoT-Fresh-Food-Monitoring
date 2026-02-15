@@ -75,3 +75,19 @@ serviceAccount.json
 venv/
 .venv/
 __pycache__/
+
+# Secrets
+ESP32/secrets.h
+functions/.env*
+Mobile/AIoT-Mobile-App/app/services/firebaseConfig.js
+
+# Unnecessary Documentation & Logs
+*.txt
+*.md
+!README.md
+!gemini.md
+Mobile/*.txt
+Mobile/*.md
+ULTIMATE_PROJECT_DOCUMENT.md
+story.md
+log.txt
